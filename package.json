@@ -1,0 +1,33 @@
+{
+  "name": "md2pdf",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Minimal web service that converts Markdown to PDF. Files live for 30 minutes, then vanish.",
+  "license": "MIT",
+  "author": "Michael Kantaria <kantariamo@gmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kantaria/md2pdf.git"
+  },
+  "homepage": "https://pdf.mkantaria.com",
+  "engines": {
+    "node": ">=20"
+  },
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "test-convert": "node test/smoke.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.4.1",
+    "github-markdown-css": "^5.8.1",
+    "helmet": "^8.0.0",
+    "highlight.js": "^11.10.0",
+    "markdown-it": "^14.1.0",
+    "multer": "^2.1.1",
+    "puppeteer": "^24.40.0",
+    "uuid": "^11.0.3"
+  }
+}

@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>{{title}}</title>
+    <style>
+      {{markdownCss}}
+    </style>
+    <style>
+      {{highlightCss}}
+    </style>
+    <style>
+      html, body {
+        margin: 0;
+        padding: 0;
+        background: #ffffff;
+      }
+      body.markdown-body {
+        box-sizing: border-box;
+        padding: 48px 56px;
+        max-width: 820px;
+        margin: 0 auto;
+        font-size: 14px;
+        line-height: 1.6;
+      }
+      body.markdown-body pre {
+        page-break-inside: avoid;
+      }
+      body.markdown-body h1,
+      body.markdown-body h2,
+      body.markdown-body h3 {
+        page-break-after: avoid;
+      }
+      body.markdown-body img {
+        max-width: 100%;
+      }
+    </style>
+  </head>
+  <body class="markdown-body">
+    {{content}}
+  </body>
+</html>

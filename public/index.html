@@ -1,0 +1,389 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>md2pdf — Markdown to PDF</title>
+    <meta name="description" content="Drop a Markdown file, get a PDF. Files auto-delete after 30 minutes." />
+    <style>
+      :root {
+        --bg: #ffffff;
+        --fg: #0f172a;
+        --muted: #64748b;
+        --border: #e2e8f0;
+        --accent: #2563eb;
+        --accent-hover: #1d4ed8;
+        --danger: #dc2626;
+        --code-bg: #f8fafc;
+        --radius: 10px;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        background: var(--bg);
+        color: var(--fg);
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue',
+          Arial, sans-serif;
+        font-size: 15px;
+        line-height: 1.55;
+      }
+      header {
+        padding: 24px 28px 12px;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 12px;
+      }
+      header h1 {
+        margin: 0;
+        font-size: 20px;
+        letter-spacing: -0.01em;
+      }
+      header h1 span {
+        color: var(--accent);
+      }
+      header p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 13px;
+      }
+      main {
+        padding: 20px 28px 28px;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+      }
+      @media (max-width: 900px) {
+        .grid {
+          grid-template-columns: 1fr;
+        }
+      }
+      .pane {
+        display: flex;
+        flex-direction: column;
+        min-height: 60vh;
+      }
+      .pane h2 {
+        margin: 0 0 10px;
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+        font-weight: 600;
+      }
+      .drop {
+        border: 2px dashed var(--border);
+        border-radius: var(--radius);
+        padding: 18px;
+        text-align: center;
+        color: var(--muted);
+        font-size: 14px;
+        margin-bottom: 12px;
+        cursor: pointer;
+        transition: border-color 0.15s, background 0.15s;
+      }
+      .drop:hover,
+      .drop.dragging {
+        border-color: var(--accent);
+        background: #eff6ff;
+        color: var(--accent);
+      }
+      .drop input {
+        display: none;
+      }
+      textarea.editor {
+        flex: 1;
+        width: 100%;
+        min-height: 360px;
+        resize: vertical;
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 14px 16px;
+        font-family: ui-monospace, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+        font-size: 13px;
+        line-height: 1.55;
+        color: var(--fg);
+        outline: none;
+        background: var(--bg);
+      }
+      textarea.editor:focus {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+      }
+      .preview-box {
+        flex: 1;
+        min-height: 360px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 18px 20px;
+        overflow: auto;
+        background: var(--bg);
+      }
+      .preview-box h1,
+      .preview-box h2,
+      .preview-box h3,
+      .preview-box h4 {
+        margin-top: 1.2em;
+      }
+      .preview-box h1:first-child {
+        margin-top: 0;
+      }
+      .preview-box pre {
+        background: var(--code-bg);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 10px 12px;
+        overflow-x: auto;
+        font-size: 13px;
+      }
+      .preview-box code {
+        background: var(--code-bg);
+        padding: 1px 5px;
+        border-radius: 4px;
+        font-size: 0.92em;
+      }
+      .preview-box pre code {
+        background: transparent;
+        padding: 0;
+      }
+      .preview-box table {
+        border-collapse: collapse;
+        margin: 0.6em 0;
+      }
+      .preview-box th,
+      .preview-box td {
+        border: 1px solid var(--border);
+        padding: 6px 10px;
+      }
+      .preview-box blockquote {
+        border-left: 3px solid var(--border);
+        color: var(--muted);
+        margin: 0.6em 0;
+        padding: 0 0.9em;
+      }
+      .actions {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-top: 16px;
+      }
+      button.convert {
+        background: var(--accent);
+        color: #fff;
+        border: none;
+        border-radius: var(--radius);
+        padding: 11px 22px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.15s;
+      }
+      button.convert:hover:not(:disabled) {
+        background: var(--accent-hover);
+      }
+      button.convert:disabled {
+        opacity: 0.55;
+        cursor: progress;
+      }
+      .hint {
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .banner {
+        background: #fef2f2;
+        border: 1px solid #fecaca;
+        color: var(--danger);
+        padding: 10px 14px;
+        border-radius: var(--radius);
+        font-size: 13px;
+        margin-bottom: 14px;
+        display: none;
+      }
+      .banner.visible {
+        display: block;
+      }
+      footer {
+        color: var(--muted);
+        font-size: 12px;
+        text-align: center;
+        padding: 16px;
+        border-top: 1px solid var(--border);
+        margin-top: 10px;
+      }
+      footer a {
+        color: var(--muted);
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>md<span>2</span>pdf</h1>
+      <p>Drop a Markdown file, get a PDF. Files auto-delete after 30 minutes.</p>
+    </header>
+    <main>
+      <div id="banner" class="banner"></div>
+      <div class="grid">
+        <section class="pane">
+          <h2>Editor</h2>
+          <label class="drop" id="drop">
+            <input id="file" type="file" accept=".md,.markdown,.txt,text/markdown,text/plain" />
+            <span id="dropText">Drop a .md file here or click to browse</span>
+          </label>
+          <textarea
+            id="editor"
+            class="editor"
+            spellcheck="false"
+            placeholder="# Hello&#10;&#10;Write or paste your **Markdown** here..."
+          ></textarea>
+        </section>
+        <section class="pane">
+          <h2>Preview</h2>
+          <div id="preview" class="preview-box"></div>
+        </section>
+      </div>
+      <div class="actions">
+        <button id="convert" class="convert" type="button">Convert to PDF</button>
+        <span class="hint">Max 5 MB · 20 requests / minute · stored 30 min</span>
+      </div>
+    </main>
+    <footer>
+      <a href="https://github.com/kantaria/md2pdf" target="_blank" rel="noopener">
+        github.com/kantaria/md2pdf
+      </a>
+      · MIT
+    </footer>
+
+    <script src="/vendor/markdown-it.min.js"></script>
+    <script>
+      (function () {
+        // markdown-it runs with html:false, so any raw HTML in user input is
+        // escaped by the parser before it reaches the DOM. We still avoid
+        // innerHTML and reparse through DOMParser as a second layer of defence.
+        var md = window.markdownit({ html: false, linkify: true, typographer: true, breaks: false });
+        var parser = new DOMParser();
+        var editor = document.getElementById('editor');
+        var preview = document.getElementById('preview');
+        var drop = document.getElementById('drop');
+        var fileInput = document.getElementById('file');
+        var convertBtn = document.getElementById('convert');
+        var banner = document.getElementById('banner');
+
+        var SAMPLE = [
+          '# Welcome to md2pdf',
+          '',
+          'Drop a `.md` file on the left or start typing here. The preview updates as you go.',
+          '',
+          '## Features',
+          '',
+          '- Markdown rendered to styled PDF',
+          '- Live preview',
+          '- Files auto-expire after 30 minutes',
+          '',
+          '```js',
+          'console.log("hello, pdf");',
+          '```',
+        ].join('\n');
+        editor.value = SAMPLE;
+        render();
+
+        editor.addEventListener('input', render);
+
+        function render() {
+          var htmlString = md.render(editor.value || '');
+          // Parse into a detached document, then move the nodes into the
+          // preview container. Scripts from a parsed document never execute
+          // (by spec), and markdown-it has already escaped any raw HTML.
+          var doc = parser.parseFromString('<body>' + htmlString + '</body>', 'text/html');
+          while (preview.firstChild) preview.removeChild(preview.firstChild);
+          var body = doc.body;
+          while (body.firstChild) preview.appendChild(body.firstChild);
+        }
+
+        function showError(msg) {
+          banner.textContent = msg;
+          banner.classList.add('visible');
+        }
+        function clearError() {
+          banner.classList.remove('visible');
+          banner.textContent = '';
+        }
+
+        ['dragenter', 'dragover'].forEach(function (ev) {
+          drop.addEventListener(ev, function (e) {
+            e.preventDefault();
+            drop.classList.add('dragging');
+          });
+        });
+        ['dragleave', 'drop'].forEach(function (ev) {
+          drop.addEventListener(ev, function (e) {
+            e.preventDefault();
+            drop.classList.remove('dragging');
+          });
+        });
+        drop.addEventListener('drop', function (e) {
+          var f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+          if (f) loadFile(f);
+        });
+        fileInput.addEventListener('change', function () {
+          if (fileInput.files && fileInput.files[0]) loadFile(fileInput.files[0]);
+        });
+
+        function loadFile(file) {
+          clearError();
+          if (file.size > 5 * 1024 * 1024) {
+            showError('File exceeds 5 MB limit.');
+            return;
+          }
+          var reader = new FileReader();
+          reader.onload = function () {
+            editor.value = String(reader.result || '');
+            render();
+          };
+          reader.onerror = function () {
+            showError('Could not read file.');
+          };
+          reader.readAsText(file);
+        }
+
+        convertBtn.addEventListener('click', async function () {
+          clearError();
+          var body = editor.value || '';
+          if (!body.trim()) {
+            showError('Editor is empty.');
+            return;
+          }
+          convertBtn.disabled = true;
+          var originalLabel = convertBtn.textContent;
+          convertBtn.textContent = 'Converting…';
+          try {
+            var r = await fetch('/api/convert', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ markdown: body }),
+            });
+            var data = await r.json().catch(function () {
+              return {};
+            });
+            if (!r.ok) {
+              throw new Error(data.error || 'Conversion failed (' + r.status + ').');
+            }
+            window.location.href = data.url;
+          } catch (err) {
+            showError(err.message || 'Something went wrong.');
+          } finally {
+            convertBtn.disabled = false;
+            convertBtn.textContent = originalLabel;
+          }
+        });
+      })();
+    </script>
+  </body>
+</html>
